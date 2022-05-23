@@ -51,7 +51,6 @@ contract LoyaltyCard is ERC721, Ownable {
     // --- OPERATORS
 
     mapping(address => bool) whitelistedOperator;
-    address[] operators; // ordering not guaranteed
 
     modifier onlyOperator() {
         if (!whitelistedOperator[msg.sender]) revert NotAllowedToOperate();
@@ -68,7 +67,6 @@ contract LoyaltyCard is ERC721, Ownable {
     // --- TRANSFERS
 
     mapping(address => bool) whitelistedDestination;
-    address[] destinations; // ordering not guaranteed
 
     event AddedDestination(address destination);
     event RemovedDestination(address destination);
@@ -185,18 +183,6 @@ contract LoyaltyCard is ERC721, Ownable {
     }
 
     /**
-      @notice Returns all whitelisted destinations. 
-      
-      Ordering of the result may differ in time due to add/remove operations.
-     */
-    function getDestinations() public view returns (address[] memory dests) {
-        dests = new address[](destinations.length);
-        for (uint256 i = 0; i < destinations.length; i++) {
-            dests[i] = destinations[i];
-        }
-    }
-
-    /**
       @notice Returns whether given address may be receiver of tokens via transfer
       @param dest Address to check
      */
@@ -208,50 +194,19 @@ contract LoyaltyCard is ERC721, Ownable {
       @notice Adds a destination to the whitelisted destinations
     */
     function addDestination(address destinationToAdd) public onlyOwner {
-        if (whitelistedDestination[destinationToAdd])
-            revert AlreadyWhitelistedDestination();
         whitelistedDestination[destinationToAdd] = true;
-        destinations.push(destinationToAdd);
         emit AddedDestination(destinationToAdd);
     }
 
     /**
       @notice Removes a destination from the whitelisted destinations
-      @dev The ordering is not preserved
      */
     function removeDestination(address destinationToRemove) public onlyOwner {
-        if (!whitelistedDestination[destinationToRemove])
-            revert NotWhitelistedDestination();
         whitelistedDestination[destinationToRemove] = false;
-
-        for (uint256 i = 0; i < destinations.length; i++) {
-            if (destinations[i] == destinationToRemove) {
-                if (i < destinations.length - 1) {
-                    // put last destination into its place
-                    address last = destinations[destinations.length - 1];
-                    destinations[i] = last;
-                    destinations.pop();
-                    break;
-                } else {
-                    // just remove it
-                    destinations.pop();
-                }
-            }
-        }
         emit RemovedDestination(destinationToRemove);
     }
 
     // ======================= OPERATORS ================== //
-
-    /**
-      @notice Returns all whitelisted operators. Ordering of the result may differ in time due to add/remove operations.
-     */
-    function getOperators() public view returns (address[] memory ops) {
-        ops = new address[](operators.length);
-        for (uint256 i = 0; i < operators.length; i++) {
-            ops[i] = operators[i];
-        }
-    }
 
     /**
       @notice Returns whether given address may operate
@@ -265,36 +220,15 @@ contract LoyaltyCard is ERC721, Ownable {
       @notice Adds an operator to the whitelisted operators
      */
     function addOperator(address operatorToAdd) public onlyOwner {
-        if (whitelistedOperator[operatorToAdd])
-            revert AlreadyWhitelistedOperator();
         whitelistedOperator[operatorToAdd] = true;
-        operators.push(operatorToAdd);
         emit AddedOperator(operatorToAdd);
     }
 
     /**
       @notice Removes an operator from the whitelisted operators
-      @dev The ordering is not preserved
      */
     function removeOperator(address operatorToRemove) public onlyOwner {
-        if (!whitelistedOperator[operatorToRemove])
-            revert NotWhitelistedOperator();
         whitelistedOperator[operatorToRemove] = false;
-
-        for (uint256 i = 0; i < operators.length; i++) {
-            if (operators[i] == operatorToRemove) {
-                if (i < operators.length - 1) {
-                    // put last operator into its place
-                    address last = operators[operators.length - 1];
-                    operators[i] = last;
-                    operators.pop();
-                    break;
-                } else {
-                    // just remove it
-                    operators.pop();
-                }
-            }
-        }
         emit RemovedOperator(operatorToRemove);
     }
 }

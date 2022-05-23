@@ -100,37 +100,16 @@ describe("Loyalty Card contract", function () {
 
   // ============= OPERATORS
 
-  it("After deployment there should be no whitelisted operators", async function () {
-    const operators = await loyaltyCard.getOperators();
-    expect(operators.length).to.equal(0);
-  });
-
-  it("Can add and remove operators with consistent retrieval", async function () {
+  it("Can add and remove operators", async function () {
     expect(await loyaltyCard.isOperator(operator1.address)).to.equal(false);
-    expect(await loyaltyCard.isOperator(operator1.address)).to.equal(false);
-    expect(await loyaltyCard.isOperator(operator1.address)).to.equal(false);
+    await expect(loyaltyCard.addOperator(operator1.address))
+      .to.emit(loyaltyCard, "AddedOperator")
+      .withArgs(operator1.address);
+    expect(await loyaltyCard.isOperator(operator1.address)).to.equal(true);
 
-    let operators;
-
-    await expect(loyaltyCard.addOperator(operator1.address)).to.emit(
-      loyaltyCard,
-      "AddedOperator"
-    );
-    operators = await loyaltyCard.getOperators();
-    expect(operators.length).to.equal(1);
-    expect(await loyaltyCard.isOperator(operator1.address)).to.equal(true);
-    loyaltyCard.addOperator(operator2.address);
-    loyaltyCard.addOperator(operator3.address);
-    operators = await loyaltyCard.getOperators();
-    expect(operators.length).to.equal(3);
-    expect(await loyaltyCard.isOperator(operator1.address)).to.equal(true);
-    expect(await loyaltyCard.isOperator(operator1.address)).to.equal(true);
-    await expect(loyaltyCard.removeOperator(operator1.address)).to.emit(
-      loyaltyCard,
-      "RemovedOperator"
-    );
-    operators = await loyaltyCard.getOperators();
-    expect(operators.length).to.equal(2);
+    await expect(loyaltyCard.removeOperator(operator1.address))
+      .to.emit(loyaltyCard, "RemovedOperator")
+      .withArgs(operator1.address);
     expect(await loyaltyCard.isOperator(operator1.address)).to.equal(false);
   });
 
@@ -193,53 +172,28 @@ describe("Loyalty Card contract", function () {
 
   // ============= TRANSFERS
 
-  it("After deployment there should be no whitelisted destinations", async function () {
-    const destinations = await loyaltyCard.getDestinations();
-    expect(destinations.length).to.equal(0);
-  });
-
-  it("Can add and remove destination with consistent retrieval", async function () {
+  it("Can add and remove destinations", async function () {
     expect(await loyaltyCard.isDestination(destination1.address)).to.equal(
       false
     );
-    expect(await loyaltyCard.isDestination(destination2.address)).to.equal(
-      false
-    );
 
-    let destinations;
-
-    await expect(loyaltyCard.addDestination(destination1.address)).to.emit(
-      loyaltyCard,
-      "AddedDestination"
-    );
-    destinations = await loyaltyCard.getDestinations();
-    expect(destinations.length).to.equal(1);
-    expect(await loyaltyCard.isDestination(destination1.address)).to.equal(
-      true
-    );
-    loyaltyCard.addDestination(destination2.address);
-    loyaltyCard.addDestination(destination3.address);
-    destinations = await loyaltyCard.getDestinations();
-    expect(destinations.length).to.equal(3);
-    expect(await loyaltyCard.isDestination(destination1.address)).to.equal(
-      true
-    );
+    loyaltyCard.addDestination(destination1.address);
+    await expect(loyaltyCard.addDestination(destination1.address))
+      .to.emit(loyaltyCard, "AddedDestination")
+      .withArgs(destination1.address);
     expect(await loyaltyCard.isDestination(destination1.address)).to.equal(
       true
     );
 
-    await expect(loyaltyCard.removeDestination(destination1.address)).to.emit(
-      loyaltyCard,
-      "RemovedDestination"
-    );
-    destinations = await loyaltyCard.getDestinations();
-    expect(destinations.length).to.equal(2);
+    await expect(loyaltyCard.removeDestination(destination1.address))
+      .to.emit(loyaltyCard, "RemovedDestination")
+      .withArgs(destination1.address);
     expect(await loyaltyCard.isDestination(destination1.address)).to.equal(
       false
     );
   });
 
-  it("Should not allow a transfer destination that isn't whitelisted", async function () {
+  it("Should not allow transfer to a destination that isn't whitelisted", async function () {
     await loyaltyCard.setMinter(owner.address);
     await loyaltyCard.mint(user.address);
     const mintedTokenId = (await loyaltyCard.mintCounter()) - 1;
