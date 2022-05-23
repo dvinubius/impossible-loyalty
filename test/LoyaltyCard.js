@@ -24,11 +24,17 @@ describe("Loyalty Card contract", function () {
     loyaltyCard = await LoyaltyCard.deploy("ImpossibleLoyaltyCard", "ILC");
   });
 
-  // ============= MINTING
+  // ============= MINTING & BURNING
 
   it("Only allows the owner to set a minter", async function () {
     expect(
       loyaltyCard.connect(attacker).setMinter(attacker.address)
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
+  it("Only allows the owner to set a burner", async function () {
+    expect(
+      loyaltyCard.connect(attacker).setBurner(attacker.address)
     ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
@@ -38,13 +44,58 @@ describe("Loyalty Card contract", function () {
     ).to.be.revertedWith("NotAllowedToMint");
   });
 
-  it("Should correctly keep track of the supply", async function () {
+  it("Allows token owner to burn", async function () {
     await loyaltyCard.setMinter(owner.address);
-    expect(await loyaltyCard.supply()).to.equal(0);
     loyaltyCard.mint(user.address);
-    expect(await loyaltyCard.supply()).to.equal(1);
+    expect(await loyaltyCard.mintCounter()).to.equal(1);
+    const tokenId = 0;
+    expect(await loyaltyCard.connect(user).burn(tokenId))
+      .to.emit(loyaltyCard, "")
+      .withArgs(user.address, ethers.constants.AddressZero, tokenId);
+  });
+
+  it("Allows approved burner to burn", async function () {
+    await loyaltyCard.setMinter(owner.address);
     loyaltyCard.mint(user.address);
-    expect(await loyaltyCard.supply()).to.equal(2);
+    expect(await loyaltyCard.mintCounter()).to.equal(1);
+    const tokenId = 0;
+    await loyaltyCard.setBurner(owner.address);
+    await loyaltyCard.connect(user).approve(owner.address, tokenId);
+    expect(await loyaltyCard.burn(tokenId))
+      .to.emit(loyaltyCard, "")
+      .withArgs(user.address, ethers.constants.AddressZero, tokenId);
+  });
+
+  it("Prevents burning if not by token owner or approved burner", async function () {
+    await loyaltyCard.setMinter(owner.address);
+    loyaltyCard.mint(user.address);
+    expect(await loyaltyCard.mintCounter()).to.equal(1);
+    const tokenId = 0;
+
+    // without approval
+    expect(loyaltyCard.connect(attacker).burn(tokenId)).to.be.revertedWith(
+      "NotAllowedToBurn"
+    );
+
+    // with approval
+    await loyaltyCard.connect(user).approve(attacker.address, tokenId);
+    expect(
+      loyaltyCard.connect(attacker).burn(attacker.address)
+    ).to.be.revertedWith("NotAllowedToBurn");
+  });
+
+  it("Should correctly keep track of mints and burns", async function () {
+    await loyaltyCard.setMinter(owner.address);
+    expect(await loyaltyCard.mintCounter()).to.equal(0);
+    expect(await loyaltyCard.burnCounter()).to.equal(0);
+    loyaltyCard.mint(user.address);
+    expect(await loyaltyCard.mintCounter()).to.equal(1);
+    loyaltyCard.mint(user.address);
+    expect(await loyaltyCard.mintCounter()).to.equal(2);
+    await loyaltyCard.setBurner(owner.address);
+    await loyaltyCard.connect(user).approve(owner.address, 0);
+    expect(await loyaltyCard.burn(0));
+    expect(await loyaltyCard.burnCounter()).to.equal(1);
   });
 
   // ============= OPERATORS
@@ -88,7 +139,7 @@ describe("Loyalty Card contract", function () {
   it("Newly minted card should have no total and no current points", async function () {
     await loyaltyCard.setMinter(owner.address);
     await loyaltyCard.mint(user.address);
-    const mintedTokenId = (await loyaltyCard.supply()) - 1;
+    const mintedTokenId = (await loyaltyCard.mintCounter()) - 1;
     expect(await loyaltyCard.totalPoints(mintedTokenId)).to.equal(0);
     expect(await loyaltyCard.currentPoints(mintedTokenId)).to.equal(0);
   });
@@ -96,7 +147,7 @@ describe("Loyalty Card contract", function () {
   it("Should only allow operator to add and redeem points", async function () {
     await loyaltyCard.setMinter(owner.address);
     await loyaltyCard.mint(user.address);
-    const mintedTokenId = (await loyaltyCard.supply()) - 1;
+    const mintedTokenId = (await loyaltyCard.mintCounter()) - 1;
     await expect(
       loyaltyCard.connect(attacker).addPoints(mintedTokenId, 1)
     ).to.be.revertedWith("NotAllowedToOperate");
@@ -115,7 +166,7 @@ describe("Loyalty Card contract", function () {
   it("Should correctly account points", async function () {
     await loyaltyCard.setMinter(owner.address);
     await loyaltyCard.mint(user.address);
-    const mintedTokenId = (await loyaltyCard.supply()) - 1;
+    const mintedTokenId = (await loyaltyCard.mintCounter()) - 1;
     await loyaltyCard.addOperator(operator1.address);
 
     await loyaltyCard.connect(operator1).addPoints(mintedTokenId, 1);
@@ -132,7 +183,7 @@ describe("Loyalty Card contract", function () {
   it("Should not be able to redeem more points than available", async function () {
     await loyaltyCard.setMinter(owner.address);
     await loyaltyCard.mint(user.address);
-    const mintedTokenId = (await loyaltyCard.supply()) - 1;
+    const mintedTokenId = (await loyaltyCard.mintCounter()) - 1;
     await loyaltyCard.addOperator(operator1.address);
     await loyaltyCard.connect(operator1).addPoints(mintedTokenId, 10);
     await expect(
@@ -191,7 +242,7 @@ describe("Loyalty Card contract", function () {
   it("Should not allow a transfer destination that isn't whitelisted", async function () {
     await loyaltyCard.setMinter(owner.address);
     await loyaltyCard.mint(user.address);
-    const mintedTokenId = (await loyaltyCard.supply()) - 1;
+    const mintedTokenId = (await loyaltyCard.mintCounter()) - 1;
     let mintedTokenOwner = await loyaltyCard.ownerOf(mintedTokenId);
 
     expect(mintedTokenOwner).to.equal(user.address);

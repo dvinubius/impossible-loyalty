@@ -3,14 +3,14 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
 // TODO TBD we could also say that the owner should always automatically be allowed to mint and operate
 
 /**
-  @title Loyalty Points Cards NFTs for Impossible Finance users
+  @title Loyalty Points Cards NFTs for Impossible Finance users.
   @notice Minting only allowed for specific minter
   @notice The cards are not transferrable except for whitelisted destinations.
+  @notice The cards can be burned.
   @notice The cards acccumulate points which can be redeemed. Only whitelisted operators are allowed to do so.
   @notice This contract has no knowledge of particular benefits.
   @notice Benefits for redeeming loyalty points are handled entirely by operating contracts.
@@ -18,23 +18,24 @@ import "hardhat/console.sol";
  */
 
 contract LoyaltyCard is ERC721, Ownable {
-    // --- MINTING
+    // --- MINTING / BURNING
 
-    address public minter; // dedicated minting operator - TODO TBD if this is the right way to go. could also be just contract owner for simplicity
-    uint256 public supply; // used as mint counter
+    address public minter; // dedicated minting operator - TODO TBD ideally another contract so we can execute dedicated on-chain logic on mint
+    address public burner; // dedicated burn operator - TODO TBD ideally another contract so we can execute dedicated on-chain logic on burn
+    uint256 public mintCounter;
+    uint256 public burnCounter; // may come in handy for statistics
 
     modifier onlyMinter() {
         if (msg.sender != minter) revert NotAllowedToMint();
         _;
     }
-
     modifier onlyExistingToken(uint256 tokenId) {
-        // TODO TBD could also use conditino   tokenId < supply   if we are sure we'll never burn them
         if (!_exists(tokenId)) revert TokenDoesntExist();
         _;
     }
 
     error NotAllowedToMint();
+    error NotAllowedToBurn();
     error TokenDoesntExist();
 
     // --- POINTS
@@ -80,20 +81,42 @@ contract LoyaltyCard is ERC721, Ownable {
         ERC721(name_, symbol_)
     {}
 
-    // ======================= MINTING ===================== //
+    // ================= MINTING / BURNING ================= //
 
     /**
       @notice Mint a new card to given account
       @param to The account to mint to
      */
     function mint(address to) public onlyMinter {
-        uint256 tokenId = supply++; /// @dev first tokenId will be 0;
+        uint256 tokenId = mintCounter++; /// @dev first tokenId will be 0;
         // TODO TBD if _safeMint is necessary (I guess we only allow persons to own these cards, so I guess not)
         _mint(to, tokenId);
     }
 
     function setMinter(address _minter) public onlyOwner {
         minter = _minter;
+    }
+
+    function setBurner(address _burner) public onlyOwner {
+        burner = _burner;
+    }
+
+    /**
+        @notice Burns a token with given tokenId
+        @param tokenId The id of the token to be burned.
+
+        @dev Following OZ's pattern: _burn() can only be called by the token owner or an approved party.
+            Additionally, we say that the approved party must be our burner.
+     */
+    function burn(uint256 tokenId) public onlyExistingToken(tokenId) {
+        address spender = _msgSender();
+        address owner = ERC721.ownerOf(tokenId);
+        bool isOwner = spender == owner;
+        bool isApprovedBurner = (isApprovedForAll(owner, spender) ||
+            getApproved(tokenId) == spender) && spender == burner;
+        if (!isOwner && !isApprovedBurner) revert NotAllowedToBurn();
+        burnCounter++;
+        _burn(tokenId);
     }
 
     // ======================= POINTS ====================== //
