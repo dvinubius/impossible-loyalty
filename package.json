@@ -9,10 +9,14 @@
     "verify-bsc-mainnet": "node scripts/verify.js binance",
     "verify-bsc-testnet": "node scripts/verify.js binanceTest",
     "test": "npx hardhat test",
-    "add-operator": "npx hardhat add-operator",
-    "remove-operator": "npx hardhat remove-operator",
-    "add-destination": "npx hardhat add-destination",
-    "remove-destination": "npx hardhat remove-destination"
+    "add-operator-bsc-mainnet": "npx hardhat --network binance add-operator",
+    "remove-operator-bsc-mainnet": "npx hardhat --network binance remove-operator",
+    "add-destination-bsc-mainnet": "npx hardhat --network binance add-destination",
+    "remove-destination-bsc-mainnet": "npx hardhat --network binance remove-destination",
+    "add-operator-bsc-testnet": "npx hardhat --network binanceTest add-operator",
+    "remove-operator-bsc-testnet": "npx hardhat --network binanceTest remove-operator",
+    "add-destination-bsc-testnet": "npx hardhat --network binanceTest add-destination",
+    "remove-destination-bsc-testnet": "npx hardhat --network binanceTest remove-destination"
   },
   "keywords": [],
   "author": "",
