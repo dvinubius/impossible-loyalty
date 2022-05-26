@@ -1,15 +1,21 @@
 # impossible-loyalty
 
-Draft for an NFT contract to create cards within a loyalty programme. 
+A set of NFT contracts to allow a loyalty points programme for Impossible Finance users.
 
-The card NFTs are dynamic: points can be added and redeemed for benefits. These operations are only performed by whitelisted operators.
+## LoyaltyCard.sol
+An ERC721 contract to create items representing loyalty cards.  
 
-The cards are not transferrable by default. Destinations for transfers can be whitelisted (e.g. it would make sense to transfer the cards to staking contracts)
+The card NFTs are **dynamic**: points can be added and redeemed for benefits. These operations are only performed by whitelisted operators, not by the NFT holders themselves.
+
+The cards are **not transferrable** by default. Destinations for transfers can be whitelisted (e.g. it would make sense to transfer the cards to staking contracts)
+
+## LoyaltyCardMaster.sol
+A contract to be used as an operator on the LoyaltyCard contract. It can actually add points to given users and redeem those for benefits to the card holders.
 
 # Installation
 
 `npm install`
-# OPS
+# Operations
 
 ## Currently supported chains
 

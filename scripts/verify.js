@@ -48,6 +48,7 @@ verify = async (contractName) => {
 const main = async () => {
   try {
     await verify("LoyaltyCard");
+    await verify("LoyaltyCardMaster");
   } catch (e) {
     console.log(e);
   }

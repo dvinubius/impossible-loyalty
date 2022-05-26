@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
   @title Loyalty Points Cards NFTs for Impossible Finance users.
+  @author Impossible Finance
   @notice Minting only allowed for specific minter
   @notice The cards are not transferrable except for whitelisted destinations.
   @notice The cards can be burned.
