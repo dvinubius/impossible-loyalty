@@ -26,6 +26,9 @@ contract LoyaltyCardMaster is ERC721, Ownable {
     uint256 public mintCounter;
     uint256 public burnCounter; // may come in handy for statistics
 
+    event SetMinter(address minter);
+    event SetBurner(address burner);
+
     modifier onlyMinter() {
         if (msg.sender != minter) revert NotAllowedToMint();
         _;
@@ -86,18 +89,20 @@ contract LoyaltyCardMaster is ERC721, Ownable {
       @notice Mint a new card to given account
       @param to The account to mint to
      */
-    function mint(address to) public onlyMinter {
+    function mint(address to) external onlyMinter {
         uint256 tokenId = mintCounter++; /// @dev first tokenId will be 0;
         // TODO TBD if _safeMint is necessary (I guess we only allow persons to own these cards, so I guess not)
         _mint(to, tokenId);
     }
 
-    function setMinter(address _minter) public onlyOwner {
+    function setMinter(address _minter) external onlyOwner {
         minter = _minter;
+        emit SetMinter(minter);
     }
 
-    function setBurner(address _burner) public onlyOwner {
+    function setBurner(address _burner) external onlyOwner {
         burner = _burner;
+        emit SetBurner(burner);
     }
 
     /**
@@ -107,12 +112,15 @@ contract LoyaltyCardMaster is ERC721, Ownable {
         @dev Following OZ's pattern: _burn() can only be called by the token owner or an approved party.
             Additionally, we say that the approved party must be our burner.
      */
-    function burn(uint256 tokenId) public onlyExistingToken(tokenId) {
+    function burn(uint256 tokenId) external onlyExistingToken(tokenId) {
         address spender = _msgSender();
         address owner = ERC721.ownerOf(tokenId);
         bool isOwner = spender == owner;
-        bool isApprovedBurner = (isApprovedForAll(owner, spender) ||
-            getApproved(tokenId) == spender) && spender == burner;
+        bool isApprovedBurner;
+        if (spender == burner) {
+            isApprovedBurner = (isApprovedForAll(owner, spender) ||
+                getApproved(tokenId) == spender);
+        }
         if (!isOwner && !isApprovedBurner) revert NotAllowedToBurn();
         burnCounter++;
         _burn(tokenId);
@@ -125,7 +133,7 @@ contract LoyaltyCardMaster is ERC721, Ownable {
       @param tokenId The tokenId of the card
      */
     function totalPoints(uint256 tokenId)
-        public
+        external
         view
         onlyExistingToken(tokenId)
         returns (uint256)
@@ -138,7 +146,7 @@ contract LoyaltyCardMaster is ERC721, Ownable {
       @param tokenId The tokenId of the card
      */
     function currentPoints(uint256 tokenId)
-        public
+        external
         view
         onlyExistingToken(tokenId)
         returns (uint256)
@@ -151,7 +159,7 @@ contract LoyaltyCardMaster is ERC721, Ownable {
       @param tokenId The loyalty card to add points to
       @param points Number of points to add
      */
-    function addPoints(uint256 tokenId, uint256 points) public onlyOperator {
+    function addPoints(uint256 tokenId, uint256 points) external onlyOperator {
         tokenIdToTotalPoints[tokenId] += points;
         tokenIdToCurrentPoints[tokenId] += points;
         emit AddedPoints(tokenId, points, msg.sender);
@@ -162,7 +170,10 @@ contract LoyaltyCardMaster is ERC721, Ownable {
       @param tokenId The loyalty card to redeem points from
       @param points Number of points to redeem
      */
-    function redeemPoints(uint256 tokenId, uint256 points) public onlyOperator {
+    function redeemPoints(uint256 tokenId, uint256 points)
+        external
+        onlyOperator
+    {
         if (points > tokenIdToCurrentPoints[tokenId])
             revert InsufficientPoints();
         tokenIdToCurrentPoints[tokenId] -= points;
@@ -179,7 +190,10 @@ contract LoyaltyCardMaster is ERC721, Ownable {
         address to,
         uint256 tokenId
     ) internal override {
-        if (!whitelistedDestination[to]) revert NotAllowedAsDestination();
+        // this only goes through if token is being sent to a WL destination
+        // or a WL destination (related to Impossible Finance) transfers it (back)
+        if (!whitelistedDestination[to] && !whitelistedDestination[from])
+            revert NotAllowedAsDestination();
         super._transfer(from, to, tokenId);
     }
 
@@ -187,14 +201,14 @@ contract LoyaltyCardMaster is ERC721, Ownable {
       @notice Returns whether given address may be receiver of tokens via transfer
       @param dest Address to check
      */
-    function isDestination(address dest) public view returns (bool) {
+    function isDestination(address dest) external view returns (bool) {
         return whitelistedDestination[dest];
     }
 
     /**
       @notice Adds a destination to the whitelisted destinations
     */
-    function addDestination(address destinationToAdd) public onlyOwner {
+    function addDestination(address destinationToAdd) external onlyOwner {
         whitelistedDestination[destinationToAdd] = true;
         emit AddedDestination(destinationToAdd);
     }
@@ -202,7 +216,7 @@ contract LoyaltyCardMaster is ERC721, Ownable {
     /**
       @notice Removes a destination from the whitelisted destinations
      */
-    function removeDestination(address destinationToRemove) public onlyOwner {
+    function removeDestination(address destinationToRemove) external onlyOwner {
         whitelistedDestination[destinationToRemove] = false;
         emit RemovedDestination(destinationToRemove);
     }
@@ -213,14 +227,14 @@ contract LoyaltyCardMaster is ERC721, Ownable {
       @notice Returns whether given address may operate
       @param op Address to check
      */
-    function isOperator(address op) public view returns (bool) {
+    function isOperator(address op) external view returns (bool) {
         return whitelistedOperator[op];
     }
 
     /**
       @notice Adds an operator to the whitelisted operators
      */
-    function addOperator(address operatorToAdd) public onlyOwner {
+    function addOperator(address operatorToAdd) external onlyOwner {
         whitelistedOperator[operatorToAdd] = true;
         emit AddedOperator(operatorToAdd);
     }
@@ -228,7 +242,7 @@ contract LoyaltyCardMaster is ERC721, Ownable {
     /**
       @notice Removes an operator from the whitelisted operators
      */
-    function removeOperator(address operatorToRemove) public onlyOwner {
+    function removeOperator(address operatorToRemove) external onlyOwner {
         whitelistedOperator[operatorToRemove] = false;
         emit RemovedOperator(operatorToRemove);
     }
