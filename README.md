@@ -9,7 +9,7 @@ The card NFTs are **dynamic**: points can be added and redeemed for benefits. Th
 
 The cards are **not transferrable** by default. Destinations for transfers can be whitelisted (e.g. it would make sense to transfer the cards to staking contracts)
 
-## LoyaltyCardMaster.sol
+## LoyaltyCardOperator.sol
 A contract to be used as an operator on the LoyaltyCard contract. It can actually add points to given users and redeem those for benefits to the card holders.
 
 # Installation

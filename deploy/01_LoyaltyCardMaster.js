@@ -4,11 +4,9 @@ module.exports = async (hre) => {
 
   const { deployer } = await getNamedAccounts();
 
-  const loyaltyCardContract = await deployments.get("LoyaltyCard");
-
   await deploy("LoyaltyCardMaster", {
     from: deployer,
-    args: [loyaltyCardContract.address],
+    args: ["ImpossibleLoyaltyCard", "ILC"],
     log: true,
   });
 };

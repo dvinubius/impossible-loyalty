@@ -3,10 +3,10 @@ pragma solidity ^0.8.4;
 
 /**
   @title Interface for the loyalty card use-case-specific functions 
-         of the Impossible Finance LoyaltyCard contract
+         of the Impossible Finance LoyaltyCardMaster contract
   @author Impossible Finance
  */
-interface ILoyaltyCard {
+interface ILoyaltyCardMaster {
     function mint(address to) external;
 
     function setMinter(address _minter) external;

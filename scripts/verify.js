@@ -47,8 +47,8 @@ verify = async (contractName) => {
 
 const main = async () => {
   try {
-    await verify("LoyaltyCard");
     await verify("LoyaltyCardMaster");
+    await verify("LoyaltyCardOperator");
   } catch (e) {
     console.log(e);
   }
